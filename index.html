@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DevOps Assignment 6 – Jenkins Integration with GitHub CI/CD Demo Application" />
+  <title>Jenkins CI/CD Demo | DevOps Assignment 6</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-dark:    #0d0f14;
+      --bg-card:    #13161e;
+      --bg-glass:   rgba(255,255,255,0.04);
+      --border:     rgba(255,255,255,0.08);
+      --accent:     #4f8ef7;
+      --accent2:    #a855f7;
+      --green:      #22c55e;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --text-1:     #f1f5f9;
+      --text-2:     #94a3b8;
+      --text-3:     #475569;
+      --radius:     14px;
+      --radius-sm:  8px;
+      --shadow:     0 8px 32px rgba(0,0,0,0.45);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background Orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+    .orb-1 { width: 600px; height: 600px; background: var(--accent);  top: -200px; left: -200px; animation-delay: 0s; }
+    .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -150px; right: -150px; animation-delay: 4s; }
+    .orb-3 { width: 350px; height: 350px; background: var(--green);   top: 40%;  left: 55%; animation-delay: 8s; }
+
+    @keyframes drift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.05); }
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── Nav ── */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 0;
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,15,20,0.75);
+    }
+    nav .inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 700; letter-spacing: -0.3px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: grid; place-items: center; font-size: 18px;
+      box-shadow: 0 0 20px rgba(79,142,247,0.4);
+    }
+    .badge {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: #fff; font-size: 0.7rem; font-weight: 600;
+      padding: 3px 10px; border-radius: 99px; letter-spacing: 0.3px;
+    }
+
+    /* ── Hero ── */
+    .hero { padding: 90px 0 60px; text-align: center; }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--bg-glass); border: 1px solid var(--border);
+      padding: 6px 16px; border-radius: 99px; font-size: 0.8rem;
+      color: var(--accent); margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+    .hero-tag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 800; letter-spacing: -1.5px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--text-1) 40%, var(--accent) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 18px;
+    }
+    .hero-sub {
+      color: var(--text-2); font-size: 1.05rem; max-width: 580px; margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    /* ── Pipeline Visual ── */
+    .pipeline {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap; margin-bottom: 70px;
+    }
+    .pipe-step {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 18px 22px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); cursor: default;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      min-width: 110px;
+    }
+    .pipe-step:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--accent); }
+    .pipe-step .icon { font-size: 1.8rem; }
+    .pipe-step .label { font-size: 0.75rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; }
+    .pipe-step .sub   { font-size: 0.65rem; color: var(--text-3); margin-top: -4px; }
+    .pipe-arrow { color: var(--text-3); font-size: 1.2rem; padding: 0 4px; }
+
+    /* Status colours */
+    .pipe-step.done   { border-color: rgba(34,197,94,0.35);  }
+    .pipe-step.done .icon-wrap   { color: var(--green); }
+    .pipe-step.active { border-color: rgba(79,142,247,0.45); box-shadow: 0 0 20px rgba(79,142,247,0.15); }
+    .pipe-step.active .icon-wrap { color: var(--accent); }
+
+    /* ── Grid Cards ── */
+    section { margin-bottom: 64px; }
+    .section-title {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 22px;
+    }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(79,142,247,0.04), transparent 60%);
+      pointer-events: none;
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: var(--shadow); border-color: rgba(79,142,247,0.3); }
+    .card-icon { font-size: 2rem; margin-bottom: 14px; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .card p  { font-size: 0.875rem; color: var(--text-2); line-height: 1.65; }
+
+    /* ── Code Block ── */
+    .code-wrap {
+      background: #080b12; border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .code-dots { display: flex; gap: 7px; }
+    .code-dots span { width: 12px; height: 12px; border-radius: 50%; }
+    .code-dots span:nth-child(1) { background: #ef4444; }
+    .code-dots span:nth-child(2) { background: #eab308; }
+    .code-dots span:nth-child(3) { background: #22c55e; }
+    .code-label { font-size: 0.75rem; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+    pre {
+      padding: 24px; overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem; line-height: 1.75;
+      color: #c9d1d9;
+    }
+    .kw  { color: #f97583; }
+    .str { color: #9ecbff; }
+    .fn  { color: #79b8ff; }
+    .cm  { color: #6a737d; font-style: italic; }
+    .num { color: #f8e3a3; }
+
+    /* ── Status Banner ── */
+    .status-banner {
+      display: flex; align-items: center; gap: 16px;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25);
+      border-radius: var(--radius); padding: 20px 24px; margin-bottom: 64px;
+    }
+    .status-icon { font-size: 2rem; }
+    .status-text h4 { font-size: 0.95rem; font-weight: 700; color: var(--green); }
+    .status-text p  { font-size: 0.82rem; color: var(--text-2); margin-top: 3px; }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 16px; }
+    .step {
+      display: flex; gap: 18px; align-items: flex-start;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px;
+      transition: border-color 0.25s;
+    }
+    .step:hover { border-color: rgba(79,142,247,0.3); }
+    .step-num {
+      min-width: 36px; height: 36px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: grid; place-items: center; font-size: 0.82rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .step-body h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 5px; }
+    .step-body p  { font-size: 0.83rem; color: var(--text-2); line-height: 1.6; }
+    .step-body code {
+      background: rgba(255,255,255,0.07); border-radius: 5px;
+      padding: 1px 7px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 30px 0; text-align: center;
+      color: var(--text-3); font-size: 0.8rem;
+    }
+    footer span { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- Background Orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="inner">
+    <div class="logo">
+      <div class="logo-icon">🔧</div>
+      DevOps Lab
+    </div>
+    <span class="badge">Assignment 6</span>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="container">
+  <div class="hero">
+    <div class="hero-tag">
+      <span class="dot"></span>
+      Jenkins · GitHub · CI/CD
+    </div>
+    <h1>Jenkins Integration<br/>with GitHub</h1>
+    <p class="hero-sub">
+      Automate source code retrieval from GitHub using Jenkins to build a robust
+      Continuous Integration pipeline.
+    </p>
+  </div>
+
+  <!-- Pipeline Visual -->
+  <div class="pipeline">
+    <div class="pipe-step done">
+      <div class="icon">👨‍💻</div>
+      <div class="label">Developer</div>
+      <div class="sub">Push Code</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step done">
+      <div class="icon">🐙</div>
+      <div class="label">GitHub</div>
+      <div class="sub">Repository</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step active">
+      <div class="icon">🤖</div>
+      <div class="label">Jenkins</div>
+      <div class="sub">Automation</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">🔨</div>
+      <div class="label">Build</div>
+      <div class="sub">Compile</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">🧪</div>
+      <div class="label">Test</div>
+      <div class="sub">Validate</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">✅</div>
+      <div class="label">Result</div>
+      <div class="sub">Deploy</div>
+    </div>
+  </div>
+
+  <!-- Status Banner -->
+  <div class="status-banner">
+    <div class="status-icon">🚀</div>
+    <div class="status-text">
+      <h4>Build #1 — SUCCESS</h4>
+      <p>Latest commit pulled from <strong>main</strong> branch · All tests passed · Workspace ready</p>
+    </div>
+  </div>
+
+  <!-- Concept Cards -->
+  <section>
+    <div class="section-title">Core Concepts</div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🔄</div>
+        <h3>Continuous Integration</h3>
+        <p>Automatically build and test code changes every time a developer commits to the repository, catching bugs early.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔌</div>
+        <h3>Git Plugin</h3>
+        <p>Jenkins Git Plugin enables direct connection to any Git-based repository (GitHub, GitLab, Bitbucket) for source checkout.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <h3>Workspace</h3>
+        <p>Jenkins clones your repository into a dedicated workspace directory so build steps always operate on fresh, clean code.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📜</div>
+        <h3>Jenkinsfile</h3>
+        <p>Pipeline-as-code approach: define your entire CI/CD pipeline in a <code>Jenkinsfile</code> stored alongside your source code.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🛡️</div>
+        <h3>Credentials</h3>
+        <p>Jenkins securely stores GitHub tokens / SSH keys so private repositories can be cloned without exposing credentials.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Webhooks</h3>
+        <p>GitHub webhooks trigger Jenkins builds automatically on every push, removing the need for manual "Build Now" clicks.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Jenkinsfile Code -->
+  <section>
+    <div class="section-title">Pipeline as Code</div>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-label">Jenkinsfile</div>
+      </div>
+      <pre><span class="cm">// Declarative Pipeline – Assignment 6</span>
+<span class="kw">pipeline</span> {
+    <span class="kw">agent</span> any
+
+    <span class="kw">environment</span> {
+        APP_NAME = <span class="str">'devops-demo'</span>
+        PYTHON   = <span class="str">'python'</span>
+    }
+
+    <span class="kw">stages</span> {
+        <span class="kw">stage</span>(<span class="str">'Checkout'</span>) {
+            <span class="kw">steps</span> {
+                <span class="fn">git</span> branch: <span class="str">'main'</span>,
+                    url: <span class="str">'https://github.com/Strix33/devops-assignment.git'</span>
+                <span class="fn">echo</span> <span class="str">"✅ Code checked out successfully"</span>
+            }
+        }
+
+        <span class="kw">stage</span>(<span class="str">'Build'</span>) {
+            <span class="kw">steps</span> {
+                <span class="fn">echo</span> <span class="str">"🔨 Building ${env.APP_NAME}..."</span>
+                <span class="fn">sh</span> <span class="str">'python app.py'</span>
+            }
+        }
+
+        <span class="kw">stage</span>(<span class="str">'Test'</span>) {
+            <span class="kw">steps</span> {
+                <span class="fn">echo</span> <span class="str">"🧪 Running test suite..."</span>
+                <span class="fn">sh</span> <span class="str">'python -m pytest --tb=short || python app.py'</span>
+            }
+        }
+
+        <span class="kw">stage</span>(<span class="str">'Archive'</span>) {
+            <span class="kw">steps</span> {
+                <span class="fn">echo</span> <span class="str">"📦 Archiving workspace..."</span>
+                <span class="fn">archiveArtifacts</span> artifacts: <span class="str">'**/*.py,**/*.html'</span>,
+                                  allowEmptyArchive: <span class="kw">true</span>
+            }
+        }
+    }
+
+    <span class="kw">post</span> {
+        <span class="kw">success</span> { <span class="fn">echo</span> <span class="str">"🎉 Pipeline completed successfully!"</span> }
+        <span class="kw">failure</span> { <span class="fn">echo</span> <span class="str">"💥 Pipeline failed. Check console output."</span> }
+    }
+}</pre>
+    </div>
+  </section>
+
+  <!-- Setup Steps -->
+  <section>
+    <div class="section-title">Setup Procedure</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Create GitHub Repository</h4>
+          <p>Create a new repository on GitHub and push this project. The repo should contain <code>app.py</code>, <code>index.html</code>, <code>Jenkinsfile</code>, and <code>README.md</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Install Jenkins Plugins</h4>
+          <p>Navigate to <code>Manage Jenkins → Plugins → Available</code>. Install <strong>Git Plugin</strong>, <strong>GitHub Plugin</strong>, and <strong>Pipeline Plugin</strong>. Restart Jenkins after installation.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Create a Freestyle / Pipeline Job</h4>
+          <p>Click <strong>New Item</strong>, name it <code>GitHub-Jenkins-Demo</code>, and select <em>Freestyle Project</em> or <em>Pipeline</em>. Click OK to proceed.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Configure Source Code Management</h4>
+          <p>Under <em>Source Code Management</em> select <strong>Git</strong>, paste your repository URL, and set branch to <code>*/main</code>. Add credentials for private repos.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Add Build Step</h4>
+          <p>In the <em>Build Steps</em> section, add <em>Execute Shell</em> (Linux) or <em>Execute Windows batch command</em> and enter <code>python app.py</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h4>Build Now &amp; Verify</h4>
+          <p>Click <strong>Build Now</strong>. Open <em>Console Output</em> to confirm the repository is cloned and the build runs successfully.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <p>DevOps Lab &nbsp;·&nbsp; Assignment 6 &nbsp;·&nbsp; <span>Jenkins × GitHub CI/CD</span></p>
+</footer>
+
+</body>
+</html>
